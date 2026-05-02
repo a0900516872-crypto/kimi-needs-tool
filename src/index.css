@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #080808;
+    --bg-elevated: #0e0e0e;
+    --bg-card: #141414;
+    --border: #222;
+    --border-light: #333;
+    --text: #f0f0f0;
+    --text-secondary: #999;
+    --text-muted: #555;
+    --accent: #c62828;
+    --accent-hover: #e03030;
+    --accent-glow: rgba(198, 40, 40, 0.25);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --font: 'Noto Sans SC', 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #root { width: 100%; height: 100%; overflow: hidden; }
+}
+
+@layer components {
+  /* ======== Spotlight mouse-follow effect ======== */
+  .spotlight-container {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.4;
+    mix-blend-mode: screen;
+  }
+
+  /* ======== CRT Scanline effect ======== */
+  .scanlines::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
+    opacity: 0.5;
+  }
+
+  /* ======== Grid overlay ======== */
+  .grid-overlay::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 20%, transparent 70%);
+  }
+
+  /* ======== NIKI-style inputs & buttons ======== */
+  .btn-niki {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.3s var(--ease);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-niki::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s var(--ease);
+  }
+
+  .btn-niki:hover::before {
+    transform: translateX(100%);
+  }
+
+  .btn-niki:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px var(--accent-glow);
+  }
+
+  .btn-niki:active {
+    transform: scale(0.98);
+  }
+
+  .input-niki {
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s var(--ease);
+    width: 100%;
+  }
+
+  .input-niki:focus {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .input-niki::placeholder { color: var(--text-muted); }
+
+  /* ======== Chip / Tag ======== */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 0.06em;
+    background: transparent;
+  }
+
+  /* ======== Display title (bold, uppercase feel) ======== */
+  .display-huge {
+    font-family: var(--font);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  .display-large {
+    font-family: var(--font);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  /* ======== Section number label ======== */
+  .section-num {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* ======== Watermark letter ======== */
+  .watermark {
+    font-family: var(--font);
+    font-weight: 900;
+    color: var(--accent);
+    opacity: 0.06;
+    line-height: 0.8;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* ======== Image treatment ======== */
+  .img-cinematic {
+    object-fit: cover;
+    filter: saturate(0.6) contrast(1.1);
+  }
+
+  /* ======== Divider ======== */
+  .line { height: 1px; background: var(--border); }
+
+  /* ======== Scrollbar ======== */
+  .scrollbar-thin::-webkit-scrollbar { width: 2px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border-light); }
+}
