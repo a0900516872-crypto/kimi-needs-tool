@@ -201,4 +201,18 @@
   .scrollbar-thin::-webkit-scrollbar { width: 2px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border-light); }
+
+  /* ======== Recorder pulse ======== */
+  .recorder-pulse {
+    animation: recorderPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes recorderPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(198, 40, 40, 0);
+    }
+  }
 }

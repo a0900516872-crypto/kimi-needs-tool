@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buildSlides, getActLabel, getChapterLabel, getSlideLabel } from '@/data/slides';
+import type { AnswersMap } from '@/types/answers';
 import Spotlight from '@/components/Spotlight';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -26,6 +27,7 @@ export default function App() {
   const [noteCount, setNoteCount] = useState(0);
   const [started, setStarted] = useState(false);
   const [slideKey, setSlideKey] = useState(0);
+  const [answers, setAnswers] = useState<AnswersMap>({});
   const touchX = useRef(0);
 
   // Note count
@@ -51,6 +53,35 @@ export default function App() {
 
   const goNext = useCallback(() => { if (current < TOTAL - 1) navTo(current + 1); }, [current, navTo]);
   const goPrev = useCallback(() => { if (current > 0) navTo(current - 1); }, [current, navTo]);
+
+  // Load answers from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('dm_answers');
+      if (raw) setAnswers(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+
+  const saveAnswer = useCallback((slideIndex: number, transcript: string) => {
+    const slide = SLIDES[slideIndex];
+    const next: AnswersMap = {
+      ...answers,
+      [slideIndex]: {
+        slideIndex,
+        question: slide.title || '',
+        chapter: slide.chapter || '',
+        transcript,
+        updatedAt: new Date().toISOString(),
+      }
+    };
+    setAnswers(next);
+    localStorage.setItem('dm_answers', JSON.stringify(next));
+  }, [answers]);
+
+  const goToReview = useCallback(() => {
+    const reviewIndex = SLIDES.findIndex(s => s.type === 'review');
+    if (reviewIndex >= 0) navTo(reviewIndex);
+  }, [navTo]);
 
   // Keyboard
   useEffect(() => {
@@ -117,8 +148,8 @@ export default function App() {
       case 'case': return <CaseSlide caseName={slide.caseName!} caseQuote={slide.caseQuote!} image={slide.image!} />;
       case 'transition': return <TransitionSlide title={slide.title!} subtitle={slide.subtitle!} content={slide.content!} />;
       case 'chapter-intro': return <ChapterIntroSlide chapter={slide.chapter!} title={slide.title!} subtitle={slide.subtitle!} image={slide.image!} />;
-      case 'question': return <QuestionSlide chapter={slide.chapter} title={slide.title!} guide={slide.guide!} image={slide.image!} questionIndex={qIdx} totalInChapter={qTotal} />;
-      case 'review': return <ReviewSlide title={slide.title!} content={slide.content!} />;
+      case 'question': return <QuestionSlide chapter={slide.chapter} title={slide.title!} guide={slide.guide!} image={slide.image!} questionIndex={qIdx} totalInChapter={qTotal} slideIndex={current} savedAnswer={answers[current]?.transcript} onSaveAnswer={saveAnswer} />;
+      case 'review': return <ReviewSlide title={slide.title!} content={slide.content!} answers={answers} />;
       case 'end': return <EndSlide title={slide.title!} subtitle={slide.subtitle!} content={slide.content!} />;
       default: return null;
     }
@@ -171,6 +202,8 @@ export default function App() {
           onNext={goNext}
           showNotes={showNotes}
           onToggleNotes={() => setShowNotes(!showNotes)}
+          onGoToReview={goToReview}
+          answerCount={Object.keys(answers).length}
         />
       )}
 
