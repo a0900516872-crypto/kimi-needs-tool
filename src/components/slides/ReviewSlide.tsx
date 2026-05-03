@@ -1,68 +1,24 @@
 import { useState, useCallback } from 'react';
-import { CheckCircle, Copy, Download } from 'lucide-react';
-import type { AnswersMap } from '@/types/answers';
+import { CheckCircle, Copy, Download, FileAudio } from 'lucide-react';
 
 interface Props {
   title: string;
   content: string;
-  answers: AnswersMap;
+  transcript: string;
+  audioUrl: string | null;
 }
 
-const CHAPTER_NAMES: Record<string, string> = {
-  '1': '你和你的家',
-  '2': '一天的节奏',
-  '3': '心中的画面',
-  '4': '必须解决的事',
-  '5': '未来说清楚',
-};
-
-const CHAPTER_ORDER = ['1', '2', '3', '4', '5'];
-
-export default function ReviewSlide({ title, content, answers }: Props) {
+export default function ReviewSlide({ title, content, transcript, audioUrl }: Props) {
   const [copied, setCopied] = useState(false);
-
-  const grouped = CHAPTER_ORDER.map((ch) => ({
-    chapter: ch,
-    name: CHAPTER_NAMES[ch] || `章节 ${ch}`,
-    items: Object.values(answers)
-      .filter((a) => a.chapter === ch)
-      .sort((a, b) => a.slideIndex - b.slideIndex),
-  }));
-
-  const totalAnswered = Object.values(answers).filter((a) => a.transcript.trim()).length;
-
-  const buildMarkdown = useCallback(() => {
-    const date = new Date().toLocaleDateString('zh-CN');
-    let md = `# 飛计划 STUDIO — 客户需求挖掘访谈记录\n\n`;
-    md += `访谈时间：${date}\n\n---\n\n`;
-
-    grouped.forEach(({ name, items }) => {
-      if (items.length === 0) return;
-      md += `## ${name}\n\n`;
-      items.forEach((item, idx) => {
-        md += `**Q${idx + 1}: ${item.question}**\n`;
-        if (item.transcript.trim()) {
-          md += `> ${item.transcript.trim()}\n`;
-        } else {
-          md += `> *未记录*\n`;
-        }
-        md += `\n`;
-      });
-      md += `---\n\n`;
-    });
-
-    return md;
-  }, [grouped]);
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(buildMarkdown());
+      await navigator.clipboard.writeText(transcript);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback
       const textarea = document.createElement('textarea');
-      textarea.value = buildMarkdown();
+      textarea.value = transcript;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand('copy');
@@ -70,19 +26,31 @@ export default function ReviewSlide({ title, content, answers }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [buildMarkdown]);
+  }, [transcript]);
 
-  const handleExport = useCallback(() => {
-    const blob = new Blob([buildMarkdown()], { type: 'text/markdown;charset=utf-8' });
+  const handleExportText = useCallback(() => {
+    const date = new Date().toLocaleDateString('zh-CN');
+    const md = `# 飛计划 STUDIO — 客户需求挖掘访谈记录\n\n访谈时间：${date}\n\n---\n\n${transcript}\n`;
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `访谈记录_${new Date().toLocaleDateString('zh-CN')}.md`;
+    a.download = `访谈记录_${date}.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [buildMarkdown]);
+  }, [transcript]);
+
+  const handleDownloadAudio = useCallback(() => {
+    if (!audioUrl) return;
+    const a = document.createElement('a');
+    a.href = audioUrl;
+    a.download = `访谈录音_${new Date().toLocaleDateString('zh-CN')}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, [audioUrl]);
 
   return (
     <div className="h-full overflow-y-auto scrollbar-thin px-8 md:px-16 lg:px-24 py-12 relative">
@@ -97,64 +65,58 @@ export default function ReviewSlide({ title, content, answers }: Props) {
           {title}
         </h2>
 
-        <p className="text-base leading-[1.9] text-[var(--text-secondary)] mb-10">
+        <p className="text-base leading-[1.9] text-[var(--text-secondary)] mb-8">
           {content}
         </p>
 
-        {/* Stats */}
-        <div className="flex items-center gap-4 mb-10 text-[12px] text-[var(--text-muted)]">
-          <span>已记录 {totalAnswered} 题</span>
-          <span className="w-1 h-1 rounded-full bg-[var(--border-light)]" />
-          <span>共 {Object.values(answers).length} 题</span>
-        </div>
+        {/* Transcript area */}
+        <div className="border border-[var(--border)] p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[12px] tracking-[0.15em] text-[var(--text-muted)]">访谈转写文本</span>
+            {transcript && (
+              <span className="text-[10px] text-[var(--text-muted)]">共 {transcript.length} 字</span>
+            )}
+          </div>
 
-        {/* Chapter groups */}
-        <div className="space-y-8">
-          {grouped.map(({ chapter, name, items }) => (
-            <div key={chapter} className="border border-[var(--border)] p-6">
-              <h3 className="text-[var(--accent)] text-[12px] tracking-[0.2em] mb-5 font-medium">
-                {name}
-              </h3>
-              {items.length === 0 ? (
-                <p className="text-[13px] text-[var(--text-muted)] italic">本章节暂无问题</p>
-              ) : (
-                <div className="space-y-5">
-                  {items.map((item) => (
-                    <div key={item.slideIndex}>
-                      <div className="text-[13px] font-medium text-[var(--text)] mb-1">
-                        {item.question}
-                      </div>
-                      <div className="text-[13px] text-[var(--text-secondary)] pl-3 border-l border-[var(--border-light)] leading-relaxed">
-                        {item.transcript.trim() ? (
-                          item.transcript.trim()
-                        ) : (
-                          <span className="italic text-[var(--text-muted)]">未记录</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {transcript ? (
+            <div className="text-[14px] leading-[1.9] text-[var(--text-secondary)] whitespace-pre-wrap">
+              {transcript}
             </div>
-          ))}
+          ) : (
+            <p className="text-[13px] text-[var(--text-muted)] italic">暂无转写记录，访谈时开启录音即可自动生成。</p>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 mt-10 mb-16">
-          <button
-            onClick={handleCopy}
-            className="btn-niki text-[13px] py-3 px-5"
-          >
-            <Copy size={14} strokeWidth={1.5} />
-            <span>{copied ? '已复制' : '复制全部'}</span>
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 py-3 px-5 text-[13px] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all"
-          >
-            <Download size={14} strokeWidth={1.5} />
-            <span>导出 Markdown</span>
-          </button>
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          {transcript && (
+            <>
+              <button
+                onClick={handleCopy}
+                className="btn-niki text-[13px] py-3 px-5"
+              >
+                <Copy size={14} strokeWidth={1.5} />
+                <span>{copied ? '已复制' : '复制文本'}</span>
+              </button>
+              <button
+                onClick={handleExportText}
+                className="flex items-center gap-2 py-3 px-5 text-[13px] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all"
+              >
+                <Download size={14} strokeWidth={1.5} />
+                <span>导出 Markdown</span>
+              </button>
+            </>
+          )}
+
+          {audioUrl && (
+            <button
+              onClick={handleDownloadAudio}
+              className="flex items-center gap-2 py-3 px-5 text-[13px] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-all"
+            >
+              <FileAudio size={14} strokeWidth={1.5} />
+              <span>下载音频</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

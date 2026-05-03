@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buildSlides, getActLabel, getChapterLabel, getSlideLabel } from '@/data/slides';
-import type { AnswersMap } from '@/types/answers';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useMediaRecorder } from '@/hooks/useMediaRecorder';
 import Spotlight from '@/components/Spotlight';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -20,6 +21,12 @@ import EndSlide from '@/components/slides/EndSlide';
 const SLIDES = buildSlides();
 const TOTAL = SLIDES.length;
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export default function App() {
   const [current, setCurrent] = useState(0);
   const [showNotes, setShowNotes] = useState(false);
@@ -27,8 +34,55 @@ export default function App() {
   const [noteCount, setNoteCount] = useState(0);
   const [started, setStarted] = useState(false);
   const [slideKey, setSlideKey] = useState(0);
-  const [answers, setAnswers] = useState<AnswersMap>({});
   const touchX = useRef(0);
+
+  // Global recording
+  const { isRecording: isMediaRecording, audioUrl, start: startMedia, stop: stopMedia } = useMediaRecorder();
+  const { supported: speechSupported, isListening, transcript, start: startSpeech, stop: stopSpeech } = useSpeechRecognition();
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [savedTranscript, setSavedTranscript] = useState('');
+
+  const isRecording = isMediaRecording || isListening;
+
+  // Load saved transcript
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('dm_transcript');
+      if (raw) setSavedTranscript(raw);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Recording timer
+  useEffect(() => {
+    if (isRecording) {
+      recordingTimer.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
+    } else {
+      if (recordingTimer.current) clearInterval(recordingTimer.current);
+    }
+    return () => { if (recordingTimer.current) clearInterval(recordingTimer.current); };
+  }, [isRecording]);
+
+  const startRecording = useCallback(async () => {
+    setRecordingTime(0);
+    await startMedia();
+    if (speechSupported) startSpeech();
+  }, [startMedia, speechSupported, startSpeech]);
+
+  const stopRecording = useCallback(() => {
+    stopMedia();
+    stopSpeech();
+    // Save transcript when stopping
+    if (transcript.trim()) {
+      localStorage.setItem('dm_transcript', transcript.trim());
+      setSavedTranscript(transcript.trim());
+    }
+  }, [stopMedia, stopSpeech, transcript]);
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) stopRecording();
+    else startRecording();
+  }, [isRecording, stopRecording, startRecording]);
 
   // Note count
   useEffect(() => {
@@ -54,35 +108,6 @@ export default function App() {
   const goNext = useCallback(() => { if (current < TOTAL - 1) navTo(current + 1); }, [current, navTo]);
   const goPrev = useCallback(() => { if (current > 0) navTo(current - 1); }, [current, navTo]);
 
-  // Load answers from localStorage
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('dm_answers');
-      if (raw) setAnswers(JSON.parse(raw));
-    } catch { /* ignore */ }
-  }, []);
-
-  const saveAnswer = useCallback((slideIndex: number, transcript: string) => {
-    const slide = SLIDES[slideIndex];
-    const next: AnswersMap = {
-      ...answers,
-      [slideIndex]: {
-        slideIndex,
-        question: slide.title || '',
-        chapter: slide.chapter || '',
-        transcript,
-        updatedAt: new Date().toISOString(),
-      }
-    };
-    setAnswers(next);
-    localStorage.setItem('dm_answers', JSON.stringify(next));
-  }, [answers]);
-
-  const goToReview = useCallback(() => {
-    const reviewIndex = SLIDES.findIndex(s => s.type === 'review');
-    if (reviewIndex >= 0) navTo(reviewIndex);
-  }, [navTo]);
-
   // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -99,11 +124,14 @@ export default function App() {
         setShowNotes((p) => !p);
       } else if (e.key === 'm' || e.key === 'M') {
         setShowMenu((p) => !p);
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        toggleRecording();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [goNext, goPrev]);
+  }, [goNext, goPrev, toggleRecording]);
 
   // Touch
   useEffect(() => {
@@ -135,7 +163,6 @@ export default function App() {
   // Compute chapter question index/total
   let qIdx = 0, qTotal = 0;
   if (slide.type === 'question' && slide.chapter) {
-    // Count questions in this chapter
     const chapterSlides = SLIDES.filter(s => s.chapter === slide.chapter && s.type === 'question');
     qTotal = chapterSlides.length;
     qIdx = chapterSlides.findIndex(s => s.title === slide.title);
@@ -148,8 +175,8 @@ export default function App() {
       case 'case': return <CaseSlide caseName={slide.caseName!} caseQuote={slide.caseQuote!} image={slide.image!} />;
       case 'transition': return <TransitionSlide title={slide.title!} subtitle={slide.subtitle!} content={slide.content!} />;
       case 'chapter-intro': return <ChapterIntroSlide chapter={slide.chapter!} title={slide.title!} subtitle={slide.subtitle!} image={slide.image!} />;
-      case 'question': return <QuestionSlide chapter={slide.chapter} title={slide.title!} guide={slide.guide!} image={slide.image!} questionIndex={qIdx} totalInChapter={qTotal} slideIndex={current} savedAnswer={answers[current]?.transcript} onSaveAnswer={saveAnswer} />;
-      case 'review': return <ReviewSlide title={slide.title!} content={slide.content!} answers={answers} />;
+      case 'question': return <QuestionSlide chapter={slide.chapter} title={slide.title!} guide={slide.guide!} image={slide.image!} questionIndex={qIdx} totalInChapter={qTotal} />;
+      case 'review': return <ReviewSlide title={slide.title!} content={slide.content!} transcript={savedTranscript || transcript} audioUrl={audioUrl} />;
       case 'end': return <EndSlide title={slide.title!} subtitle={slide.subtitle!} content={slide.content!} />;
       default: return null;
     }
@@ -174,6 +201,9 @@ export default function App() {
         moduleLabel={actLabel}
         subLabel={chapterLabel || slideLabel}
         onToggleMenu={() => setShowMenu(!showMenu)}
+        isRecording={isRecording}
+        recordingTime={formatTime(recordingTime)}
+        onToggleRecording={toggleRecording}
       />
 
       {/* Navigation Menu */}
@@ -202,8 +232,6 @@ export default function App() {
           onNext={goNext}
           showNotes={showNotes}
           onToggleNotes={() => setShowNotes(!showNotes)}
-          onGoToReview={goToReview}
-          answerCount={Object.keys(answers).length}
         />
       )}
 
@@ -222,7 +250,7 @@ export default function App() {
       {/* Keyboard hint */}
       {started && (
         <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-30 text-[11px] hidden lg:block tracking-wider" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
-          ← → 翻页 · N 笔记 · M 菜单
+          ← → 翻页 · N 笔记 · M 菜单 · R 录音
         </div>
       )}
 

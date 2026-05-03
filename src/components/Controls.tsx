@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FileText, ClipboardList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 
 interface Props {
   current: number;
@@ -7,13 +7,10 @@ interface Props {
   onNext: () => void;
   showNotes: boolean;
   onToggleNotes: () => void;
-  onGoToReview?: () => void;
-  answerCount?: number;
 }
 
-export default function Controls({ current, total, onPrev, onNext, showNotes, onToggleNotes, onGoToReview, answerCount = 0 }: Props) {
+export default function Controls({ current, total, onPrev, onNext, showNotes, onToggleNotes }: Props) {
   const progress = ((current + 1) / total) * 100;
-  const hasAnswers = answerCount > 0;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50" style={{ borderTop: '1px solid var(--border)' }}>
@@ -59,17 +56,6 @@ export default function Controls({ current, total, onPrev, onNext, showNotes, on
             <span className="hidden sm:inline">NEXT</span>
             <ChevronRight size={14} strokeWidth={1.5} />
           </button>
-
-          {onGoToReview && (
-            <button
-              onClick={onGoToReview}
-              className="flex items-center justify-center h-full w-14 hover:bg-white/[0.02] transition-all duration-200 border-l border-[var(--border)]"
-              style={{ color: hasAnswers ? 'var(--accent)' : 'var(--text-secondary)' }}
-              title="查看汇总 (Alt+R)"
-            >
-              <ClipboardList size={15} strokeWidth={1.5} />
-            </button>
-          )}
 
           <button
             onClick={onToggleNotes}
