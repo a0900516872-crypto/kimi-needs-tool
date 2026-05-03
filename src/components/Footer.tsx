@@ -31,7 +31,7 @@ export default function Footer({ noteCount }: FooterProps) {
           </span>
         )}
         <span className="text-[10px] tracking-wider hidden md:inline-block" style={{ color: 'var(--text-dim)' }}>
-          飛计划 STUDIO
+          飛计划设计事务所
         </span>
       </div>
     </div>
