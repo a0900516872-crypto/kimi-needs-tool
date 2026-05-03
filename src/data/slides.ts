@@ -227,9 +227,9 @@ const ACT4: SlideData[] = [
   {
     type: 'end',
     act: 4,
-    title: '谢谢你的坦诚分享',
+    title: '飛计划 STUDIO 会用设计你今天说的每一句话。',
     subtitle: '',
-    content: '飛计划 STUDIO 会用设计，回应你今天说的每一句话。',
+    content: '',
   },
 ];
 
