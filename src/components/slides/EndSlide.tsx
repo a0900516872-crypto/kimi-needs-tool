@@ -38,7 +38,7 @@ export default function EndSlide({ title, subtitle, content }: Props) {
         </p>
 
         <div className="flex items-center justify-center gap-4">
-          <span className="text-[11px] tracking-wider text-[var(--text-muted)]">飛计划 STUDIO</span>
+          <span className="text-[11px] tracking-wider text-[var(--text-muted)]">飛计划设计事务所</span>
           <ArrowUpRight size={12} className="text-[var(--text-muted)]" />
         </div>
       </div>
