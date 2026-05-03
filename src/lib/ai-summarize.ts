@@ -51,7 +51,11 @@ interface SummarizeOptions {
 }
 
 export async function summarizeTranscript(options: SummarizeOptions): Promise<string> {
-  const { apiKey, transcript, baseUrl = 'https://api.moonshot.cn/v1', model = 'moonshot-v1-8k' } = options;
+  const { apiKey, transcript, baseUrl, model = 'moonshot-v1-8k' } = options;
+
+  if (!baseUrl) {
+    throw new Error('未配置 API 调用地址');
+  }
 
   // 截断超长文本（8k 模型上下文约 8K tokens，留 2K 给 system prompt）
   const maxChars = 12000;
@@ -98,6 +102,7 @@ export async function summarizeTranscript(options: SummarizeOptions): Promise<st
 
 // localStorage Key 管理
 const STORAGE_KEY = 'dm_api_key';
+const STORAGE_KEY_BASE = 'dm_api_base_url';
 
 export function getStoredApiKey(): string | null {
   try {
@@ -118,6 +123,30 @@ export function saveApiKey(key: string): void {
 export function clearApiKey(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function getStoredBaseUrl(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY_BASE);
+  } catch {
+    return null;
+  }
+}
+
+export function saveBaseUrl(url: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_BASE, url);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearBaseUrl(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_BASE);
   } catch {
     // ignore
   }

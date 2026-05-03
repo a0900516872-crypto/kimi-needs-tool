@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { CheckCircle, Copy, Download, FileAudio, Sparkles, ChevronDown, ChevronUp, AlertCircle, RotateCcw } from 'lucide-react';
-import { summarizeTranscript, getStoredApiKey } from '@/lib/ai-summarize';
+import { summarizeTranscript, getStoredApiKey, getStoredBaseUrl } from '@/lib/ai-summarize';
 import ApiKeyModal from '@/components/ApiKeyModal';
 
 interface Props {
@@ -171,7 +171,8 @@ export default function ReviewSlide({ title, content, transcript, audioUrl }: Pr
 
   const handleAiSummarize = useCallback(async () => {
     const apiKey = getStoredApiKey();
-    if (!apiKey) {
+    const baseUrl = getStoredBaseUrl();
+    if (!apiKey || !baseUrl) {
       setShowModal(true);
       return;
     }
@@ -184,11 +185,11 @@ export default function ReviewSlide({ title, content, transcript, audioUrl }: Pr
     setAiStatus('loading');
     setAiError('');
     try {
-      const result = await summarizeTranscript({ apiKey, transcript });
+      const result = await summarizeTranscript({ apiKey, transcript, baseUrl });
       setAiResult(result);
       setAiStatus('done');
     } catch (err) {
-      setAiError(err instanceof Error ? err.message : '总结失败，请检查 API Key 是否有效');
+      setAiError(err instanceof Error ? err.message : '总结失败，请检查 API Key 和调用地址是否有效');
       setAiStatus('error');
     }
   }, [transcript]);
